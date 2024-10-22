@@ -1,7 +1,7 @@
 pipeline {
     agent any
     tools {
-        maven 'Maven3.8.1' // Adjust to match your Maven setup
+        maven 'Maven3.9.9' // Adjust to match your Maven setup
     }
     environment {
         DOCKERHUB_CREDENTIALS = credentials('docker-pass') // Adjust to match your credentials ID
