@@ -1,59 +1,67 @@
 pipeline {
     agent any
     tools {
-        maven 'Maven3.9.9' // Ensure this matches the Maven name in Global Tool Configuration
+        maven 'Maven 3.8.1' // Adjust to match your Maven setup
     }
-
     environment {
-        DOCKERHUB_PASS = credentials('docker-pass')
-        BUILD_TAG = ''
+        DOCKERHUB_CREDENTIALS = credentials('docker-pass') // Adjust to match your credentials ID
     }
     stages {
-        stage("Building the Student Survey Image") {
+        stage('Initialize') {
             steps {
                 script {
+                    // Define a build timestamp variable
+                    env.BUILD_TIMESTAMP = new Date().format("yyyyMMddHHmmss", TimeZone.getTimeZone('UTC'))
+                    echo "Build timestamp: ${env.BUILD_TIMESTAMP}"
+                }
+            }
+        }
+
+        stage('Building the Student Survey Image') {
+            steps {
+                script {
+                    // Checkout SCM
                     checkout scm
-                    dir('StudentSurvey') { 
-                        // Build using Maven
-                        sh "pwd"
+
+                    // Change directory to 'StudentSurvey' for Maven build
+                    dir('StudentSurvey') {
                         sh 'mvn clean package'
                     }
-                                        
-                    sh 'echo ${BUILD_TIMESTAMP}'
+
+                    // Securely handle Docker login
                     withCredentials([usernamePassword(credentialsId: 'docker-pass', 
                                                       usernameVariable: 'DOCKER_USER', 
                                                       passwordVariable: 'DOCKER_PASS')]) {
                         sh """
-                            echo ""\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin"
+                            echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
                         """
                     }
 
-                    BUILD_TAG = "${BUILD_TIMESTAMP}".replace(' ', '_').replace(':', '-')
+                    // Build Docker image using the BUILD_TIMESTAMP
+                    def imageName = "supalami/studentsurvey645:${env.BUILD_TIMESTAMP}"
+                    sh "docker build -t ${imageName} ."
 
-                    sh "docker build -t nthota2/studentsurvey645:${BUILD_TAG} ."
+                    // Save image name for later stages
+                    env.IMAGE_NAME = imageName
                 }
             }
-
-
         }
 
-        stage("Pushing Image to DockerHub") {
+        stage('Pushing Image to DockerHub') {
             steps {
                 script {
-                    sh 'docker push nthota2/studentsurvey645:${BUILD_TIMESTAMP}'
+                    // Push the Docker image to DockerHub
+                    sh "docker push ${env.IMAGE_NAME}"
                 }
             }
         }
 
-        stage("Deploying to Rancher as single pod") {
+        stage('Deploying to Rancher') {
             steps {
-                sh 'kubectl set image deployment/stusurvey-pipeline stusurvey-pipeline=nthota2/studentsurvey645:${BUILD_TIMESTAMP} -n jenkins-pipeline'
-            }
-        }
-
-        stage("Deploying to Rancher as with load balancer") {
-            steps {
-                sh 'kubectl set image deployment/studentsurvey645-lb studentsurvey645-lb=nthota2/studentsurvey645:${BUILD_TIMESTAMP} -n jenkins-pipeline'
+                script {
+                    // Deploy the new image to Rancher
+                    sh "kubectl -n dev set image deployment/development container-0=${env.IMAGE_NAME}"
+                }
             }
         }
     }
