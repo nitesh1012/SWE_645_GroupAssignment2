@@ -6,6 +6,7 @@ pipeline {
 
     environment {
         DOCKERHUB_PASS = credentials('docker-pass')
+        BUILD_TAG = ''
     }
     stages {
         stage("Building the Student Survey Image") {
@@ -27,7 +28,9 @@ pipeline {
                         """
                     }
 
-                    def customImage = docker.build("nthota2/studentsurvey645:${BUILD_TIMESTAMP}")
+                    BUILD_TAG = "${BUILD_TIMESTAMP}".replace(' ', '_').replace(':', '-')
+
+                    sh "docker build -t nthota2/studentsurvey645:${BUILD_TAG} ."
                 }
             }
 
