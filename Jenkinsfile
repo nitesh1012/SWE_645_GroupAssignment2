@@ -19,7 +19,10 @@ pipeline {
                     }
                                         
                     sh 'echo ${BUILD_TIMESTAMP}'
-                    sh "docker login -u nthota2 -p '${DOCKERHUB_PASS}\'"
+                    sh """
+                    echo '${DOCKERHUB_PASS}' | docker login -u nthota2 --password-stdin
+                    """
+
                     def customImage = docker.build("nthota2/studentsurvey645:${BUILD_TIMESTAMP}")
                 }
             }
