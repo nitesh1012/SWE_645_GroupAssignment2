@@ -1,5 +1,9 @@
 pipeline {
     agent any
+    tools {
+        maven 'Maven3.9.9' // Ensure this matches the Maven name in Global Tool Configuration
+    }
+
     environment {
         DOCKERHUB_PASS = credentials('docker-pass')
     }
@@ -8,14 +12,18 @@ pipeline {
             steps {
                 script {
                     checkout scm
-                    sh 'rm -rf *.war'
-                    sh 'jar -cvf StudentSurvey.war -C WebContent/ .'
+                    dir('StudentSurvey') { 
+                        // Build using Maven
+                        sh "pwd"
+                        sh 'mvn clean package'
+                    }
+                    
                     sh 'echo ${BUILD_TIMESTAMP}'
                     sh "docker login -u nthota2 -p ${DOCKERHUB_PASS}"
-                    def customImage = docker.build("hekme5/studentsurvey645:${BUILD_TIMESTAMP}")
+                    def customImage = docker.build("nthota2/studentsurvey645:${BUILD_TIMESTAMP}")
                 }
             }
-            
+
         }
 
         stage("Pushing Image to DockerHub") {
