@@ -38,7 +38,7 @@ pipeline {
                     }
 
                     // Build Docker image using the BUILD_TIMESTAMP
-                    def imageName = "supalami/studentsurvey645:${env.BUILD_TIMESTAMP}"
+                    def imageName = "nthota2/studentsurvey645:${env.BUILD_TIMESTAMP}"
                     sh "docker build -t ${imageName} ."
 
                     // Save image name for later stages
