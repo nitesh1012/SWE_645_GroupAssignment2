@@ -17,6 +17,7 @@ pipeline {
             }
         }
 
+
         stage('Building the Student Survey Image') {
             steps {
                 script {
